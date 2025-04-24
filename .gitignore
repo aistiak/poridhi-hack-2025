@@ -2,5 +2,7 @@ logs
 plugins
 fine_tuned_model
 intent_classifier
-airflow
+airflow/config
+airflow/plugins
+airflow/logs
 .venv
