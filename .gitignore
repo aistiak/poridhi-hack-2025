@@ -1,0 +1,6 @@
+logs
+plugins
+fine_tuned_model
+intent_classifier
+airflow
+.venv
