@@ -1,4 +1,7 @@
 
+
+![Flow Diagram](flow-1.jpeg)
+
 # todo
 
 - docker compose with ~> Quadrent-db, Apache-airflow, Mongo-db
