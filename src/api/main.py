@@ -318,12 +318,18 @@ def search_products():
     ## search the vector result ids in mongo
     latency = time.time() - start_time
     SEARCH_LATENCY.labels(endpoint="search_products", intent=intent).observe(latency)
+    # Get the current trace ID if available
+
+    trace_id = span.get_span_context().trace_id
+    print(f"Trace ID: {format(trace_id, '032x')}")
+            
     return jsonify({
         "status": "success",
         "products": products,
         # "mongo_products": mongo_products,
         "q": text,
-        "predicted_class": predicted_class
+        "predicted_class": predicted_class,
+        "trace_id": format(trace_id, '032x')
     }), 200
 
 import signal
