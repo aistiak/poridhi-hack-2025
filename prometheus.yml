@@ -1,0 +1,24 @@
+# Global configuration
+global:
+  scrape_interval: 3s  # How frequently to scrape targets
+  evaluation_interval: 3s  # How frequently to evaluate rules
+  scrape_timeout: 3s  # How long until a scrape request times out
+
+
+
+# Rule files to load
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'search-api'
+    static_configs:
+      - targets: ['host.docker.internal:5001']
+      # - targets: ['localhost:5001']

@@ -1,4 +1,5 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
+import time
 
 ##  --------------- ml code --------------------
 
@@ -19,6 +20,7 @@ from qdrant_client.http.models import Distance, VectorParams
 
 # Initialize Qdrant client
 qdrant = QdrantClient("http://localhost:6333")
+# qdrant = QdrantClient("http://qdrant:6333")
 
 # Initialize the sentence transformer model for generating embeddings
 model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -98,6 +100,19 @@ tracer = trace.get_tracer(__name__)
 
 ### ---- end ---
 
+
+### --- promethuse ---
+from prometheus_client import Histogram, generate_latest, CONTENT_TYPE_LATEST
+# Initialize Prometheus histogram for search_products latency
+SEARCH_LATENCY = Histogram(
+    "search_products_latency_seconds",
+    "Latency of the search_products endpoint",
+    labelnames=["endpoint", "intent"],
+    buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0)  # Fine-grained buckets
+)
+
+
+### ----------------
 ### ---- redis --- 
 
 ### ---------------
@@ -114,6 +129,13 @@ def index():
         "message": "API is running"
     }), 200
 
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    # Serve Prometheus metrics
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
+
+
+
 @app.route('/search-products', methods=['GET'])
 def search_products():
     """
@@ -121,6 +143,7 @@ def search_products():
     Receives query parameter 'q' for search text.
     Currently returns an empty products array with a 200 status code.
     """
+    start_time = time.time()
     # Create a root span for the search products operation
     from opentelemetry.context import set_value, get_current, attach, detach
     # # Start the parent span
@@ -293,6 +316,8 @@ def search_products():
     except Exception as e:
         print(f"Error searching MongoDB: {str(e)}")
     ## search the vector result ids in mongo
+    latency = time.time() - start_time
+    SEARCH_LATENCY.labels(endpoint="search_products", intent=intent).observe(latency)
     return jsonify({
         "status": "success",
         "products": products,
@@ -301,5 +326,31 @@ def search_products():
         "predicted_class": predicted_class
     }), 200
 
+import signal
+import sys
 
-app.run(debug=True, host='0.0.0.0', port=5001)
+def graceful_shutdown(signum, frame):
+    print("Received shutdown signal. Shutting down gracefully...")
+    # Close any open resources, connections, etc.
+    # Close MongoDB connection if it's open
+    if 'client' in globals():
+        client.close()
+        print("MongoDB connection closed")
+    # Close any other resources
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, graceful_shutdown)  # Ctrl+C
+signal.signal(signal.SIGTERM, graceful_shutdown)  # Termination signal
+
+if __name__ == "__main__":
+    try:
+        app.run(debug=True, host='0.0.0.0', port=5001)
+    except Exception as e:
+        print(f"Error running the application: {str(e)}")
+        sys.exit(1)
+    finally:
+        # Cleanup code that runs regardless of how the app exits
+        if 'client' in globals():
+            client.close()
+            print("MongoDB connection closed")
