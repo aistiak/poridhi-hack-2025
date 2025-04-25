@@ -11,3 +11,4 @@ intent_classifier_onnx/
 fine_tuned_model_onnx
 fine_tuned_model_onnx2
 venv2
+venv*
