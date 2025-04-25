@@ -1,8 +1,8 @@
 query,intent
 Find a Wireless Mouse,search_products
-Search for ergonomic with,search_products
+Search for mouse with,search_products
 Show me Wireless Mouse for Electronics,search_products
-Look for ergonomic with,search_products
+Look for mouse with,search_products
 Show Electronics products,filter_category
 List all Electronics items,filter_category
 Find Electronics equipment,filter_category
@@ -12,9 +12,9 @@ Tell me about Wireless Mouse,get_details
 Info on product ID 1,get_details
 What is Wireless Mouse?,get_details
 Find a Yoga Mat,search_products
-Search for non-slip mat,search_products
+Search for for yoga,search_products
 Show me Yoga Mat for Fitness,search_products
-Look for non-slip mat,search_products
+Look for for yoga,search_products
 Show Fitness products,filter_category
 List all Fitness items,filter_category
 Find Fitness equipment,filter_category
@@ -23,9 +23,9 @@ Details for Yoga Mat,get_details
 Tell me about Yoga Mat,get_details
 Info on product ID 2,get_details
 What is Yoga Mat?,get_details
-Compare Wireless Mouse and Yoga Mat,compare_products
-Differences between Wireless Mouse vs. Yoga Mat,compare_products
-Show Wireless Mouse vs. Yoga Mat,compare_products
+Compare Yoga Mat and Wireless Mouse,compare_products
+Differences between Yoga Mat vs. Wireless Mouse,compare_products
+Show Yoga Mat vs. Wireless Mouse,compare_products
 What products do you have?,general_inquiry
 What products do you have?,general_inquiry
 What products do you have?,general_inquiry

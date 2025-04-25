@@ -5,9 +5,33 @@ from qdrant_client.http.models import Distance, VectorParams, PointStruct
 
 # 1. Load and prepare product data
 print('> reading the data from csv')
-df = pd.read_csv("products.csv")
-df["text"] = df["name"] + " " + df["description"] + " " + df["category"]
-print(df)
+# df = pd.read_csv("products.csv")
+# df["text"] = df["name"] + " " + df["description"] + " " + df["category"]
+# print(df)
+from pymongo import MongoClient
+
+# Connect to MongoDB
+client = MongoClient("mongodb://localhost:27017/")
+db = client["hack"]  # Use your actual database name
+collection = db["products"]  # Use your actual collection name
+
+# Fetch all products from MongoDB
+mongo_products = list(collection.find({}))
+
+# Convert MongoDB data to DataFrame
+if mongo_products:
+    # Create DataFrame from MongoDB data
+    df = pd.DataFrame(mongo_products)
+    # Drop MongoDB's _id field if it exists
+    # if "_id" in df.columns:
+    #     df = df.drop("_id", axis=1)
+    # Create text field for embedding
+    df["text"] = df["name"] + " " + df["description"] + " " + df["category"]
+    print(f"Loaded {len(df)} products from MongoDB")
+else:
+    print("No products found in MongoDB, using CSV data instead")
+    exit(0)
+    # Keep the existing CSV loading code as fallback
 # 2. Generate embeddings using Sentence-Transformers
 print('> loading model')
 model = SentenceTransformer('all-MiniLM-L6-v2')  # CPU-friendly model
@@ -39,7 +63,7 @@ points = [
         id=idx,
         vector=embedding.tolist(),
         payload={
-            "id": int(row["id"]),
+            "id": str(row["_id"]),
             "name": row["name"],
             "description": row["description"],
             "category": row["category"]

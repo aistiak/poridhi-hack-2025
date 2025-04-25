@@ -1,3 +1,5 @@
+# finetune embedding model and save in onnx
+
 import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer, InputExample, losses
@@ -14,6 +16,31 @@ from pathlib import Path
 # 1. Load and prepare product data
 df = pd.read_csv("products.csv")
 df["text"] = df["name"] + " " + df["description"] + " " + df["category"]
+
+# Connect to MongoDB and get products data
+# from pymongo import MongoClient
+
+# # Connect to MongoDB
+# client = MongoClient("mongodb://localhost:27017/")
+# db = client["products_db"]  # Use your actual database name
+# collection = db["products"]  # Use your actual collection name
+
+# # Fetch all products from MongoDB
+# mongo_products = list(collection.find({}))
+
+# # Convert MongoDB data to DataFrame
+# if mongo_products:
+#     # Create DataFrame from MongoDB data
+#     df = pd.DataFrame(mongo_products)
+#     # Drop MongoDB's _id field if it exists
+#     if "_id" in df.columns:
+#         df = df.drop("_id", axis=1)
+#     # Create text field for embedding
+#     df["text"] = df["name"] + " " + df["description"] + " " + df["category"]
+#     print(f"Loaded {len(df)} products from MongoDB")
+# else:
+#     print("No products found in MongoDB, using CSV data instead")
+#     # Keep the existing CSV loading code as fallback
 
 # 2. Create triplet training examples for fine-tuning
 train_examples = []
