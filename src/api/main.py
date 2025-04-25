@@ -57,6 +57,46 @@ products_collection = db["products"]  # Collection name
 
 ### ---- end ----
 
+### --- jaeger ----
+
+from opentelemetry import trace
+from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
+# Configure the tracer provider
+resource = Resource(attributes={
+    SERVICE_NAME: "product-search-api"
+})
+
+# Create a tracer provider
+tracer_provider = TracerProvider(resource=resource)
+
+# Configure Jaeger exporter
+jaeger_exporter = JaegerExporter(
+    agent_host_name="localhost",
+    agent_port=6831,
+)
+
+# Add the exporter to the tracer provider
+tracer_provider.add_span_processor(BatchSpanProcessor(jaeger_exporter))
+
+# Set the tracer provider
+trace.set_tracer_provider(tracer_provider)
+
+# Get a tracer
+tracer = trace.get_tracer(__name__)
+
+# # Initialize auto-instrumentation for Flask and requests
+# # Note: FlaskInstrumentor().instrument(app) should be called after app is initialized
+# def instrument_flask_app(app):
+#     FlaskInstrumentor().instrument_app(app)
+#     RequestsInstrumentor().instrument()
+
+### ---- end ---
 
 ### ---- redis --- 
 
@@ -81,6 +121,67 @@ def search_products():
     Receives query parameter 'q' for search text.
     Currently returns an empty products array with a 200 status code.
     """
+    # Create a root span for the search products operation
+    from opentelemetry.context import set_value, get_current, attach, detach
+    # # Start the parent span
+    # span = tracer.start_span("search_products_operation2")
+    # span.set_attribute("endpoint", "search-products")
+
+    # # Set the span as the current span in a new context
+    # context = trace.set_span_in_context(span, context=get_current())
+    # token = attach(context)  # Attach the context
+
+    # # Start the child span (inherits parent from current context)
+    # child_span = tracer.start_span("query_find_intent2")
+    # # Do stuff...
+    # child_span.end()
+
+    # find_in_mongo_span = tracer.start_span("find_in_mongo")
+    # find_in_mongo_span.end()
+    # # Clean up
+    # span.end()
+    # detach(token)  # Detach the context
+        
+    # Start the parent span
+    span = tracer.start_span("search_products_operation2")
+    span.set_attribute("endpoint", "search-products")
+
+    # Set the parent span as the current span in a new context
+    context = trace.set_span_in_context(span, context=get_current())
+    token = attach(context)  # Attach the context
+
+    # Start the child span (inherits parent from current context)
+    child_span = tracer.start_span("query_find_intent2")
+    child_span.set_attribute("operation", "find_intent")
+
+    # Set the child span as the current span in a new context
+    child_context = trace.set_span_in_context(child_span, context=get_current())
+    child_token = attach(child_context)  # Attach the child context
+
+    # Start the grandchild span (inherits child as parent from current context)
+    grandchild_span = tracer.start_span("grandchild_operation")
+    grandchild_span.set_attribute("sub_operation", "process_data")
+
+    # Do stuff in grandchild span...
+    grandchild_span.end()
+
+    # Detach the child context to restore the parent context
+    detach(child_token)
+
+    # End the child span
+    child_span.end()
+
+    # Start the find_in_mongo span (inherits parent from current context)
+    find_in_mongo_span = tracer.start_span("find_in_mongo")
+    find_in_mongo_span.set_attribute("db_operation", "mongo_query")
+
+    # Do stuff in find_in_mongo span...
+    find_in_mongo_span.end()
+
+    # End the parent span and detach the parent context
+    span.end()
+    detach(token)  # Detach the context    
+        
     text = request.args.get('q', '')
     print({text})
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
@@ -175,7 +276,7 @@ def search_products():
             # Query MongoDB for the complete product information
             mongo_products = list(products_collection.find({"_id": {"$in": object_ids}}))
             
-            # Replace Qdrant results with complete MongoDB documents
+            # # Replace Qdrant results with complete MongoDB documents
             # if mongo_products:
             #     # Convert MongoDB _id to string for JSON serialization
             #     for product in mongo_products:
@@ -195,7 +296,7 @@ def search_products():
     return jsonify({
         "status": "success",
         "products": products,
-        "mongo_products": mongo_products,
+        # "mongo_products": mongo_products,
         "q": text,
         "predicted_class": predicted_class
     }), 200

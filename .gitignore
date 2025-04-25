@@ -6,3 +6,8 @@ airflow/config
 airflow/plugins
 airflow/logs
 .venv
+intent_classifier_onnx/
+*.onnx
+fine_tuned_model_onnx
+fine_tuned_model_onnx2
+venv2
