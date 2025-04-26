@@ -42,6 +42,19 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  # Redis Stack service
+  redis:
+    image: redis/redis-stack:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"  # Redis port
+      - "8001:8001"  # RedisInsight port
+    volumes:
+      - redis_data:/data
+    environment:
+      - REDIS_ARGS=--requirepass ""
+
   # Jaeger service for distributed tracing
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -91,9 +104,11 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     depends_on:
       - prometheus
+      
 
 volumes:
   mongodb_data:
   qdrant_data:
+  redis_data:
   prometheus_data:
   grafana_data:
