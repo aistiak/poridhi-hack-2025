@@ -476,7 +476,7 @@ def search_products():
     }
     
     # Cache the response
-    store_in_redis(cache_key, response, ttl_seconds=60)  # Cache for 60 seconds
+    store_in_redis(cache_key, response, ttl_seconds=3)  # Cache for 60 seconds
     # End the parent span and detach the parent context
     span.end()
     detach(token)  # Detach the context           
