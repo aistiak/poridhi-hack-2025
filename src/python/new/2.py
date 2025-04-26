@@ -12,6 +12,7 @@ import numpy as np
 df_products = pd.read_csv("products.csv")
 
 # 2. Define query templates for each intent
+## search , filter category , filter price rance , is stock , out of scope 
 templates = {
     "search_products": [
         "Find a {name}",

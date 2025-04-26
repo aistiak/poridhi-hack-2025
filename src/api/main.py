@@ -1,13 +1,19 @@
 from flask import Flask, jsonify, request, Response
 import time
 
+
+## URLS 
+
+QDRANT_URL = "http://localhost:6333"
+MONGO_URL = "mongodb://localhost:27017/"
 ##  --------------- ml code --------------------
 
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForSequenceClassification  # Changed from FeatureExtraction
 import torch
 
-model_dir = "intent_classifier_onnx"
+# model_dir = "intent_classifier_onnx"
+model_dir = "out_models/intent_classifier_onnx"
 ort_model = ORTModelForSequenceClassification.from_pretrained(model_dir, provider="CPUExecutionProvider")
 tokenizer = AutoTokenizer.from_pretrained(model_dir)
 # ----------------------------------------------
@@ -19,7 +25,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 
 # Initialize Qdrant client
-qdrant = QdrantClient("http://localhost:6333")
+qdrant = QdrantClient(QDRANT_URL)
 # qdrant = QdrantClient("http://qdrant:6333")
 
 # Initialize the sentence transformer model for generating embeddings
@@ -51,9 +57,9 @@ def search_products_in_qdrant(query_text, limit=5):
 from pymongo import MongoClient
 
 # Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017/")
+client = MongoClient(MONGO_URL)
 db = client["hack"]  # Database name
-products_collection = db["products"]  # Collection name
+products_collection = db["products_first"]  # Collection name
 
 
 
