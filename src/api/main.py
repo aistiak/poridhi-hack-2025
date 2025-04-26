@@ -303,7 +303,7 @@ def search_products():
         
         if object_ids:
             # Query MongoDB for the complete product information
-            mongo_products = list(products_collection.find({"_id": {"$in": object_ids}}))
+            mongo_products = list(products_collection.find({"_id": {"$in": object_ids}}, {"_id": 0}))
             
             # # Replace Qdrant results with complete MongoDB documents
             # if mongo_products:
@@ -331,7 +331,7 @@ def search_products():
             
     return jsonify({
         "status": "success",
-        "products": products,
+        "products": mongo_products, #products,
         # "mongo_products": mongo_products,
         "q": text,
         "predicted_class": predicted_class,
