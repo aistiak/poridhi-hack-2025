@@ -284,18 +284,54 @@ def search_products():
     
     print(f"Predicted intent class: {predicted_class}")
     # Map predicted class to intent
+    # intent_mapping = {
+    #     0: "search_products",
+    #     1: "filter_category",
+    #     2: "get_details",
+    #     3: "compare_products",
+    #     4: "general_inquiry",
+    #     5: "out_of_scope"
+    # }
+    
     intent_mapping = {
         0: "search_products",
         1: "filter_category",
-        2: "get_details",
-        3: "compare_products",
-        4: "general_inquiry",
-        5: "out_of_scope"
+        2: "out_of_scope"
     }
     
     intent = intent_mapping.get(predicted_class, "unknown")
     print(f"Mapped intent: {intent}")
     
+    
+    
+    if "bad" in text.lower():
+        intent = "out_of_scope"
+    # Check if intent is out_of_scope and return empty products array if true
+    if intent == "out_of_scope":
+        # Create trace span for out_of_scope handling
+        out_of_scope_span = tracer.start_span("handle_out_of_scope")
+        out_of_scope_span.set_attribute("operation", "handle_out_of_scope")
+        
+        # Log the out_of_scope intent
+        print(f"Intent is out_of_scope, returning empty products array")
+        
+        # End the span
+        out_of_scope_span.end()
+        
+        # Get trace ID for response
+        trace_id = trace.get_current_span().get_span_context().trace_id
+        
+        # Return response with empty products array
+        response = {
+            "message": "profanity not allowed",
+            "status": "success",
+            "products": [],
+            "q": text,
+            "predicted_class": predicted_class,
+            "product_ids": [],
+            "trace_id": format(trace_id, '032x')
+        }
+        return jsonify(response)
     # Only search in Qdrant if the intent is related to products
     products = []
 
@@ -319,8 +355,19 @@ def search_products():
         )
         search_quad_child_span.end()
         print(' ----- got results from qdrant ---')
+    
+        for result in search_results:
+            print(f"""
+            Score: {result.score}  # Similarity score
+            """)
+        filtered_results = []
+        for result in search_results:
+            if result.score >= 0.5:  # Only keep results with score <= 0.5
+                filtered_results.append(result)
+  
+                
         # Extract product information from search results
-        products = [result.payload for result in search_results]
+        products = [result.payload for result in filtered_results]
         print(f"Found {len(products)} products matching the query")
         
         # query_text = text #"mouse"
