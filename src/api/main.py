@@ -34,6 +34,25 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 # Collection name for product embeddings
 collection_name = "product_embeddings"
 
+from optimum.onnxruntime import ORTModelForFeatureExtraction
+
+ort_model_embed = ORTModelForFeatureExtraction.from_pretrained("out_models/embedding_model_onnx", provider="CPUExecutionProvider")
+tokenizer = AutoTokenizer.from_pretrained("out_models/embedding_model_onnx")
+
+
+# 8. Generate embeddings for products
+def generate_embeddings(texts):
+    # Tokenize the input texts
+    inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt")
+    
+    # Generate embeddings using the ONNX model
+    with torch.no_grad():
+        outputs = ort_model_embed(**inputs)
+    
+    # Get the embeddings from the model output (mean pooling)
+    embeddings = outputs.last_hidden_state.mean(dim=1)
+    return embeddings.numpy()
+
 # Function to search products using vector similarity
 def search_products_in_qdrant(query_text, limit=5):
     # Generate embedding for the query
@@ -128,8 +147,7 @@ from datetime import timedelta
 redis_client = redis.Redis(
     host='localhost',  # Use 'redis' when running in Docker
     port=6379,
-    password='admin',  # Password as specified in docker-compose
-    username='admin',  # Username as specified in docker-compose
+    # username='admin',  # Username as specified in docker-compose
     decode_responses=True  # Automatically decode responses to strings
 )
 
@@ -340,7 +358,8 @@ def search_products():
         # model = SentenceTransformer('all-MiniLM-L6-v2')
         
         # Generate embedding for the query
-        query_embedding = model.encode([text])
+        # query_embedding = model.encode([text]) # :todo
+        query_embedding = generate_embeddings([text])
         
         # Search in Qdrant
         collection_name = "product_embeddings"
@@ -360,10 +379,11 @@ def search_products():
             print(f"""
             Score: {result.score}  # Similarity score
             """)
-        filtered_results = []
+        filtered_results = search_results
         for result in search_results:
             if result.score >= 0.5:  # Only keep results with score <= 0.5
-                filtered_results.append(result)
+                # filtered_results.append(result)
+                pass 
   
                 
         # Extract product information from search results

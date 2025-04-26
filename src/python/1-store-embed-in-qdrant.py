@@ -46,8 +46,8 @@ print(embeddings)
 # 3. Connect to Qdrant and create a collection
 print('> connecting to qdrant')
 
-# qdrant = QdrantClient("http://localhost:6333")
-qdrant = QdrantClient("http://47.128.215.131:6333")
+qdrant = QdrantClient("http://localhost:6333")
+# qdrant = QdrantClient("http://47.128.215.131:6333")
 
 print('> connected to qdrant')
 
