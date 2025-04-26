@@ -16,7 +16,7 @@ db = client["hack"]  # Use your actual database name
 collection = db["products"]  # Use your actual collection name
 
 # Fetch all products from MongoDB
-mongo_products = list(collection.find({}))
+mongo_products = list(collection.find({}).skip(0).limit(100))
 
 # Convert MongoDB data to DataFrame
 if mongo_products:
@@ -26,7 +26,11 @@ if mongo_products:
     # if "_id" in df.columns:
     #     df = df.drop("_id", axis=1)
     # Create text field for embedding
-    df["text"] = df["name"] + " " + df["description"] + " " + df["category"]
+    df["title"] = str(df["title_left"])
+    df["description"] = str(df["description_left"] +   "  " + df["description_right"])
+    df["category"] = str(df["category_left"])
+    
+    df["text"] = df["title"] + " " + df["description"] + " " + df["category"]
     print(f"Loaded {len(df)} products from MongoDB")
 else:
     print("No products found in MongoDB, using CSV data instead")
@@ -42,18 +46,27 @@ print(embeddings)
 # 3. Connect to Qdrant and create a collection
 print('> connecting to qdrant')
 
-qdrant = QdrantClient("http://localhost:6333")
+# qdrant = QdrantClient("http://localhost:6333")
+qdrant = QdrantClient("http://47.128.215.131:6333")
 
 print('> connected to qdrant')
 
 embedding_dim = embeddings.shape[1]  # e.g., 384
-
-# Recreate collection (drops existing one, use carefully)
+# Define collection name
 collection_name = "product_embeddings"
-qdrant.recreate_collection(
-    collection_name=collection_name,
-    vectors_config=VectorParams(size=embedding_dim, distance=Distance.COSINE)
-)
+
+# Check if collection exists, create only if it doesn't
+collections = qdrant.get_collections().collections
+collection_exists = any(collection.name == collection_name for collection in collections)
+
+if not collection_exists:
+    print(f"> creating collection '{collection_name}'")
+    qdrant.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(size=embedding_dim, distance=Distance.COSINE)
+    )
+else:
+    print(f"> collection '{collection_name}' already exists, using it")
 
 # 4. Store embeddings in Qdrant
 print('> storing embeddings')
@@ -64,7 +77,7 @@ points = [
         vector=embedding.tolist(),
         payload={
             "id": str(row["_id"]),
-            "name": row["name"],
+            "title": row["title"],
             "description": row["description"],
             "category": row["category"]
         }
@@ -92,5 +105,5 @@ search_result = qdrant.search(
 # Print results
 print("\nSearch Results:")
 for hit in search_result:
-    print(f"Product: {hit.payload['name']}, Category: {hit.payload['category']}, Score: {hit.score}")
+    print(f"Product: {hit.payload['title']}, Category: {hit.payload['category']}, Score: {hit.score}")
     print(hit.payload)
