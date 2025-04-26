@@ -128,7 +128,8 @@ from datetime import timedelta
 redis_client = redis.Redis(
     host='localhost',  # Use 'redis' when running in Docker
     port=6379,
-    password='',  # Empty password as specified in docker-compose
+    password='admin',  # Password as specified in docker-compose
+    username='admin',  # Username as specified in docker-compose
     decode_responses=True  # Automatically decode responses to strings
 )
 
@@ -241,12 +242,12 @@ def search_products():
     token = attach(context)  # Attach the context
 
     # Start the child span (inherits parent from current context)
-    child_span = tracer.start_span("query_find_intent")
-    child_span.set_attribute("operation", "find_intent")
+    # child_span = tracer.start_span("query_find_intent")
+    # child_span.set_attribute("operation", "find_intent")
 
     # Set the child span as the current span in a new context
-    child_context = trace.set_span_in_context(child_span, context=get_current())
-    child_token = attach(child_context)  # Attach the child context
+    # child_context = trace.set_span_in_context(child_span, context=get_current())
+    # child_token = attach(child_context)  # Attach the child context
 
     # # Start the grandchild span (inherits child as parent from current context)
     # grandchild_span = tracer.start_span("grandchild_operation")
@@ -256,21 +257,13 @@ def search_products():
     # grandchild_span.end()
 
     # Detach the child context to restore the parent context
-    detach(child_token)
+    # detach(child_token)
 
     # End the child span
-    child_span.end()
+    # child_span.end()
 
-    # Start the find_in_mongo span (inherits parent from current context)
-    find_in_mongo_span = tracer.start_span("find_in_mongo")
-    find_in_mongo_span.set_attribute("db_operation", "mongo_query")
-
-    # Do stuff in find_in_mongo span...
-    find_in_mongo_span.end()
-
-    # End the parent span and detach the parent context
-    span.end()
-    detach(token)  # Detach the context    
+ 
+ 
         
     print({text})
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
@@ -282,11 +275,14 @@ def search_products():
     logits = outputs.logits
 
     # Get predicted class (intent)
+    intent_child_span = tracer.start_span("query_find_intent")
+    intent_child_span.set_attribute("operation", "find_intent")
+   
     predicted_class = torch.argmax(torch.from_numpy(logits), dim=1).item()
+    intent_child_span.end()
 
+    
     print(f"Predicted intent class: {predicted_class}")
-    
-    
     # Map predicted class to intent
     intent_mapping = {
         0: "search_products",
@@ -314,11 +310,14 @@ def search_products():
         collection_name = "product_embeddings"
 
         print(' --- getting results from qqdrant ----')
+        search_quad_child_span = tracer.start_span(" search_quad")
+        search_quad_child_span.set_attribute("operation", " search_quad")
         search_results = qdrant.search(
             collection_name=collection_name,
             query_vector=query_embedding[0].tolist(),
             limit=5  # Return top 5 results
         )
+        search_quad_child_span.end()
         print(' ----- got results from qdrant ---')
         # Extract product information from search results
         products = [result.payload for result in search_results]
@@ -349,6 +348,11 @@ def search_products():
         print(f"Error searching Qdrant: {str(e)}")
     # Search MongoDB for products with matching IDs
     mongo_products = []
+       # Start the find_in_mongo span (inherits parent from current context)
+    find_in_mongo_span = tracer.start_span("find_in_mongo")
+    find_in_mongo_span.set_attribute("db_operation", "mongo_query")
+
+
     try:
         from bson.objectid import ObjectId
         from pymongo import MongoClient
@@ -382,6 +386,9 @@ def search_products():
             
     except Exception as e:
         print(f"Error searching MongoDB: {str(e)}")
+    
+    # Do stuff in find_in_mongo span...
+    find_in_mongo_span.end()
     ## search the vector result ids in mongo
     latency = time.time() - start_time
     SEARCH_LATENCY.labels(endpoint="search_products", intent=intent).observe(latency)
@@ -403,7 +410,9 @@ def search_products():
     
     # Cache the response
     store_in_redis(cache_key, response, ttl_seconds=60)  # Cache for 60 seconds
-            
+    # End the parent span and detach the parent context
+    span.end()
+    detach(token)  # Detach the context           
     return jsonify(response), 200
 
 

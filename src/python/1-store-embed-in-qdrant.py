@@ -16,7 +16,7 @@ db = client["hack"]  # Use your actual database name
 collection = db["products"]  # Use your actual collection name
 
 # Fetch all products from MongoDB
-mongo_products = list(collection.find({}).skip(0).limit(100))
+mongo_products = list(collection.find({}).skip(0).limit(1000))
 
 # Convert MongoDB data to DataFrame
 if mongo_products:
